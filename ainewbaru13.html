@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virgi AI - AI Chat Assistant</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-bg: #ffffff;
+            --secondary-bg: #f5f5f5;
+            --card-bg: #ffffff;
+            --text-primary: #000000;
+            --text-secondary: #333333;
+            --text-muted: #666666;
+            --border-color: #e0e0e0;
+            --accent-color: #000000;
+            --accent-hover: #333333;
+            --danger-color: #e74c3c;
+            --danger-hover: #c0392b;
+            --user-bubble: #000000;
+            --ai-bubble: #f0f0f0;
+            --ai-text: #000000;
+            --typing-text: #000000;
+            --shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        [data-theme="dark"] {
+            --primary-bg: #121212;
+            --secondary-bg: #1e1e1e;
+            --card-bg: #1e1e1e;
+            --text-primary: #ffffff;
+            --text-secondary: #e0e0e0;
+            --text-muted: #aaaaaa;
+            --border-color: #333333;
+            --accent-color: #ffffff;
+            --accent-hover: #cccccc;
+            --user-bubble: #ffffff;
+            --ai-bubble: #2d2d2d;
+            --ai-text: #ffffff;
+            --typing-text: #ffffff;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+
+        body {
+            background: var(--primary-bg);
+            min-height: 100vh;
+            display: flex; justify-content: center; align-items: center;
+            padding: 20px;
+            transition: background 0.3s;
+        }
+
+        .theme-toggle, .menu-toggle {
+            position: fixed;
+            top: 20px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            width: 40px; height: 40px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; box-shadow: var(--shadow);
+            z-index: 100; color: var(--text-primary);
+        }
+
+        .menu-toggle { left: 20px; }
+        .theme-toggle { right: 20px; }
+
+        .sidebar {
+            position: fixed; top: 0; left: -350px;
+            width: 320px; height: 100vh;
+            background: var(--card-bg);
+            box-shadow: var(--shadow);
+            transition: left 0.3s ease;
+            z-index: 99; padding: 80px 20px 20px 20px;
+            overflow-y: auto;
+        }
+        .sidebar.active { left: 0; }
+
+        .sidebar-btn {
+            width: 100%; padding: 12px 15px;
+            background: var(--secondary-bg); border: none;
+            border-radius: 8px; color: var(--text-primary);
+            font-size: 0.9rem; cursor: pointer;
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 10px; transition: .2s;
+        }
+        .sidebar-btn:hover { background: var(--accent-color); color: var(--primary-bg); }
+
+        .clear-btn { background: var(--danger-color); color: white; }
+        .clear-btn:hover { background: var(--danger-hover); }
+
+        .model-selector { margin-top: 20px; }
+        .model-label { color: var(--text-muted); margin-bottom: 10px; display: block; font-size: 0.9rem; font-weight: 600; }
+
+        .model-option {
+            width: 100%; padding: 10px 12px;
+            background: var(--secondary-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 8px; cursor: pointer;
+            margin-bottom: 8px; transition: .2s;
+            color: var(--text-primary);
+        }
+
+        .model-option.active, .model-option:hover {
+            background: var(--accent-color); color: var(--primary-bg);
+        }
+
+        .model-option.off { opacity: .5; cursor: not-allowed; }
+
+        .main-container {
+            width: 100%; max-width: 800px; height: 85vh;
+            background: var(--card-bg); border-radius: 12px;
+            box-shadow: var(--shadow); border: 1px solid var(--border-color);
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+
+        header { background: var(--accent-color); color: var(--primary-bg); padding: 15px 20px; text-align: center; }
+        .logo { font-size: 1.8rem; font-weight: 800; }
+
+        .chat-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+
+        .message { width: 100%; display: flex; }
+        .message-content { max-width: 90%; padding: 12px 16px; border-radius: 18px; white-space: pre-wrap; line-height: 1.5; }
+
+        .user-message { justify-content: flex-end; }
+        .user-message .message-content { background: var(--user-bubble); color: white; }
+
+        .ai-message { justify-content: flex-start; }
+        .ai-message .message-content { background: var(--ai-bubble); color: var(--ai-text); }
+
+        /* CODE BLOCK STYLE */
+        .message-content pre {
+            background: #1e1e1e;
+            color: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            overflow-x: auto;
+            white-space: pre;
+            margin-top: 10px;
+            position: relative;
+        }
+
+        /* COPY BUTTON */
+        .copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #ffffff22;
+            border: 1px solid #ffffff55;
+            padding: 4px 10px;
+            font-size: 12px;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .copy-btn:hover { background: #ffffff44; }
+
+        .typing-indicator { padding: 5px 20px; font-size: 0.9rem; opacity: 0.8; color: var(--typing-text); }
+
+        .input-container { padding: 15px; display: flex; gap: 10px; border-top: 1px solid var(--border-color); background: var(--secondary-bg); }
+
+        #messageInput { flex: 1; padding: 12px 16px; border-radius: 25px; border: 2px solid var(--border-color); }
+        #sendButton { padding: 12px 24px; background: var(--accent-color); color: white; border-radius: 25px; border: none; font-weight: 600; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></div>
+<div class="theme-toggle" id="themeToggle"><i class="fas fa-sun" id="themeIcon"></i></div>
+
+<div class="sidebar" id="sidebar">
+    <button class="sidebar-btn"><i class="fas fa-user"></i> DEVELOPER</button>
+    <button class="sidebar-btn"><i class="fas fa-book"></i> DOCUMENTATION</button>
+    <button class="sidebar-btn clear-btn" id="clearBtn"><i class="fas fa-trash-alt"></i> CLEAR CHAT</button>
+
+    <div class="model-selector">
+        <span class="model-label">SELECT AI MODEL:</span>
+
+        <button class="model-option active" data-model="deepseek">DeepSeek</button>
+        <button class="model-option" data-model="christyai">Christy</button>
+        <button class="model-option" data-model="copilot">Copilot</button>
+        <button class="model-option off" data-model="ripple">Ripple (OFF)</button>
+
+        <button class="model-option" data-model="felo">Felo</button>
+        <button class="model-option" data-model="turboseek">Turboseek</button>
+        <button class="model-option" data-model="perplexed">Perplexed</button>
+
+        <button class="model-option" data-model="llama4">Llama 4</button>
+        <button class="model-option" data-model="llama33">Llama 3.3</button>
+        <button class="model-option" data-model="gemma">Gemma 7B</button>
+        <button class="model-option" data-model="mistral">Mistral</button>
+
+        <button class="model-option" data-model="gptoss120">GPT-OSS 120B</button>
+        <button class="model-option" data-model="gptoss20">GPT-OSS 20B</button>
+
+        <button class="model-option" data-model="gemini25v1">Gemini 2.5 v1</button>
+        <button class="model-option" data-model="gemini25v2">Gemini 2.5 v2</button>
+
+        <button class="model-option" data-model="grok4fast">Grok 4 Fast</button>
+        <button class="model-option" data-model="grok3mini">Grok 3 Mini</button>
+        <button class="model-option" data-model="grok3jail1">Grok Jail v1</button>
+        <button class="model-option" data-model="grok3jail2">Grok Jail v2</button>
+
+        <button class="model-option" data-model="venice">Venice AI</button>
+    </div>
+</div>
+
+<div class="main-container">
+    <header><div class="logo">Virgi AI</div></header>
+
+    <div class="chat-container">
+        <div class="chat-messages" id="chatMessages"></div>
+
+        <div class="typing-indicator" id="typingIndicator" style="display:none;">Virgi AI mengetik...</div>
+
+        <div class="input-container">
+            <input type="text" id="messageInput" placeholder="Ketik pesan...">
+            <button id="sendButton"><i class="fas fa-paper-plane"></i> SEND</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentModel = "deepseek";
+    const baseAPI = "https://darch-aichat.vercel.app/api";
+
+    const xemzzModels = [
+        "llama4","llama33","gemma","mistral","aoyo",
+        "gptoss120","gptoss20","gemini25v1","gemini25v2",
+        "grok4fast","grok3mini","grok3jail1",
+        "grok3jail2","venice","felo","turboseek","perplexed"
+    ];
+
+    function loadChatHistory() {
+        const saved = localStorage.getItem("virgi_chat_history");
+        document.getElementById("chatMessages").innerHTML =
+            saved || `<div class="message ai-message"><div class="message-content">Halo! Saya Virgi AI. Pilih model dari sidebar untuk memulai!</div></div>`;
+    }
+    loadChatHistory();
+
+    function saveChatHistory() {
+        localStorage.setItem(
+            "virgi_chat_history",
+            document.getElementById("chatMessages").innerHTML
+        );
+    }
+
+    /* Escape HTML */
+    function escapeHTML(text) {
+        return text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    /* Format blok kode + pasang tombol copy */
+    function formatCodeBlocks(text) {
+        return text.replace(/```([\s\S]*?)```/g, (_, code) => `
+            <pre>
+                <button class="copy-btn" onclick="copyCode(this)">COPY</button>
+                <code>${escapeHTML(code)}</code>
+            </pre>
+        `);
+    }
+
+    /* COPY CODE */
+    function copyCode(btn) {
+        const code = btn.parentElement.querySelector("code").innerText;
+        navigator.clipboard.writeText(code).then(() => {
+            btn.innerText = "COPIED!";
+            setTimeout(() => (btn.innerText = "COPY"), 1200);
+        });
+    }
+
+    function addMessage(text, isUser) {
+        const box = document.getElementById("chatMessages");
+        const div = document.createElement("div");
+
+        div.className = "message " + (isUser ? "user-message" : "ai-message");
+        div.innerHTML = `<div class="message-content">${text}</div>`;
+
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+        saveChatHistory();
+    }
+
+    async function sendMessage() {
+        const input = document.getElementById("messageInput");
+        let text = input.value.trim();
+        if (!text) return;
+
+        addMessage(text, true);
+        input.value = "";
+
+        document.getElementById("typingIndicator").style.display = "block";
+
+        let url = xemzzModels.includes(currentModel)
+            ? `${baseAPI}/xemzz?model=${currentModel}&text=${encodeURIComponent(text)}`
+            : `${baseAPI}/${currentModel}?text=${encodeURIComponent(text)}`;
+
+        try {
+            let res = await fetch(url);
+            let data = await res.json();
+
+            document.getElementById("typingIndicator").style.display = "none";
+
+            const result =
+                data?.result?.text ||
+                data?.message ||
+                "Tidak ada respon dari server.";
+
+            /* ⛔ Perbaikan penting: formatCodeBlocks dulu → baru escape */
+            const safeText = escapeHTML(result);
+            const finalText = formatCodeBlocks(safeText);
+
+            addMessage(finalText, false);
+        } catch (e) {
+            addMessage("Error koneksi.", false);
+        }
+    }
+
+    document.getElementById("sendButton").onclick = sendMessage;
+    document.getElementById("messageInput").onkeypress = e => {
+        if (e.key === "Enter") sendMessage();
+    };
+
+    document.querySelectorAll(".model-option").forEach(btn => {
+        btn.onclick = function () {
+            if (this.classList.contains("off")) return;
+            document
+                .querySelectorAll(".model-option")
+                .forEach(b => b.classList.remove("active"));
+            this.classList.add("active");
+            currentModel = this.dataset.model;
+        };
+    });
+
+    document.getElementById("menuToggle").onclick = () =>
+        document.getElementById("sidebar").classList.toggle("active");
+
+    document.getElementById("clearBtn").onclick = () => {
+        document.getElementById("chatMessages").innerHTML = "";
+        localStorage.removeItem("virgi_chat_history");
+    };
+
+    const themeToggle = document.getElementById("themeToggle");
+    const themeIcon = document.getElementById("themeIcon");
+
+    if (localStorage.getItem("theme") === "dark") {
+        document.body.setAttribute("data-theme", "dark");
+        themeIcon.classList.replace("fa-sun", "fa-moon");
+    }
+
+    themeToggle.onclick = () => {
+        const dark = document.body.getAttribute("data-theme") === "dark";
+        if (dark) {
+            document.body.removeAttribute("data-theme");
+            themeIcon.classList.replace("fa-moon", "fa-sun");
+            localStorage.setItem("theme", "light");
+        } else {
+            document.body.setAttribute("data-theme", "dark");
+            themeIcon.classList.replace("fa-sun", "fa-moon");
+            localStorage.setItem("theme", "dark");
+        }
+    };
+</script>
+
+</body>
+</html>
